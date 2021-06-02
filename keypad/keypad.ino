@@ -34,11 +34,14 @@ void enter_student_id() {
     if (customKey == '#') {
       Serial.println("Delete");
       if (currentBuffer != 0) {
-        lcd.setCursor(currentBuffer - 1, 0);
-        lcd.print(" ");
         currentBuffer--;
+        lcd.setCursor(currentBuffer, 0);
+        lcd.print(" ");
+        byte lastChar = strlen(buffer)-1;
+        buffer[lastChar] = '\0';
       }
-      charToString(buffer, 'A');
+      // charToString(buffer, 'A');
+      Serial.println(String(buffer));
     } else {
        buffer[currentBuffer] = customKey;
       // lcd.clear();
