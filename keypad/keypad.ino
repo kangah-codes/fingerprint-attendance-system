@@ -6,7 +6,7 @@ const byte ROWS = 4;
 const byte COLS = 4; 
 const int rs = 53, en = 51, d4 =49, d5 = 47, d6 = 45, d7 = 43;
 
-uint8_t id;
+uint16_t id;
 
 #if (defined(__AVR__) || defined(ESP8266)) && !defined(__AVR_ATmega2560__)
 // For UNO and others without hardware serial, we must use software serial...
@@ -44,10 +44,12 @@ void charToString(char S[], String &D)
  Serial.println(D);
 }
 
-uint8_t get_student_id() {
+uint16_t get_student_id() {
   char buffer[123] = {};
   int currentBuffer = 0;
-  uint8_t student_id = 0;
+  uint16_t student_id = 0;
+  lcd.setCursor(0, 0); 
+  lcd.print("Enter student id:");
   
   while (student_id < 100) {
     Serial.println(student_id);
@@ -58,16 +60,19 @@ uint8_t get_student_id() {
         Serial.println("Delete");
         if (currentBuffer != 0) {
           --currentBuffer;
-          lcd.setCursor(currentBuffer, 0);
+          lcd.setCursor(currentBuffer, 1);
           lcd.print(" ");
           byte lastChar = strlen(buffer)-1;
           buffer[lastChar] = '\0';
         }
       } else if (customKey == '*') {
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Put finger");
         return atoi(String(buffer).c_str());
         }else {
-        buffer[currentBuffer] = uint8_t(customKey);
-        lcd.setCursor(currentBuffer, 0); 
+        buffer[currentBuffer] = uint16_t(customKey);
+        lcd.setCursor(currentBuffer, 1); 
         lcd.print(customKey);
         ++currentBuffer;
         student_id = atoi(buffer);
@@ -96,7 +101,7 @@ void setup(){
   }
 }
 
-uint8_t getFingerprintEnroll() {
+uint16_t getFingerprintEnroll() {
 
   int p = -1;
   Serial.print("Waiting for valid finger to enroll as #"); Serial.println(id);
@@ -105,12 +110,18 @@ uint8_t getFingerprintEnroll() {
     switch (p) {
     case FINGERPRINT_OK:
       Serial.println("Image taken");
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Image taken");
       break;
     case FINGERPRINT_NOFINGER:
       Serial.println(".");
       break;
     case FINGERPRINT_PACKETRECIEVEERR:
       Serial.println("Communication error");
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Error");
       break;
     case FINGERPRINT_IMAGEFAIL:
       Serial.println("Imaging error");
@@ -154,11 +165,17 @@ uint8_t getFingerprintEnroll() {
   Serial.print("ID "); Serial.println(id);
   p = -1;
   Serial.println("Place same finger again");
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Repeat finger");
   while (p != FINGERPRINT_OK) {
     p = finger.getImage();
     switch (p) {
     case FINGERPRINT_OK:
       Serial.println("Image taken");
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Image taken");
       break;
     case FINGERPRINT_NOFINGER:
       Serial.print(".");
@@ -205,11 +222,17 @@ uint8_t getFingerprintEnroll() {
   p = finger.createModel();
   if (p == FINGERPRINT_OK) {
     Serial.println("Prints matched!");
+    lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Match");
   } else if (p == FINGERPRINT_PACKETRECIEVEERR) {
     Serial.println("Communication error");
     return p;
   } else if (p == FINGERPRINT_ENROLLMISMATCH) {
     Serial.println("Fingerprints did not match");
+    lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("No match");
     return p;
   } else {
     Serial.println("Unknown error");
@@ -220,6 +243,10 @@ uint8_t getFingerprintEnroll() {
   p = finger.storeModel(id);
   if (p == FINGERPRINT_OK) {
     Serial.println("Stored!");
+    lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Stored");
+      delay(1000);
   } else if (p == FINGERPRINT_PACKETRECIEVEERR) {
     Serial.println("Communication error");
     return p;
