@@ -87,22 +87,17 @@ uint8_t get_student_id()
         {
           if (student_id >= 0 && student_id < 128)
           {
-            for (int i=0; i< EEPROM.length(); ++i) {
-              // checking if student ID is already in use
-              if (EEPROM.read(i) == atoi(String(buffer).c_str())) {
+            if (EEPROM.read(atoi(String(buffer).c_str())) == atoi(String(buffer).c_str())) {
                 lcd.clear();
                 lcd.setCursor(0, 0);
                 lcd.print("ID already taken");
                 delay(2000);
                 return false;
               }
-
-              lcd.clear();
+            lcd.clear();
             lcd.setCursor(0, 0);
             lcd.print("Place finger");
             return atoi(String(buffer).c_str());
-            }
-            
           }
           else
           {
@@ -110,7 +105,7 @@ uint8_t get_student_id()
             lcd.setCursor(0, 0);
             lcd.print("Invalid ID");
             lcd.setCursor(0, 1);
-            lcd.print("From 100-127");
+            lcd.print("From 1-127");
             beep();
             delay(1000);
             return false;
@@ -435,17 +430,13 @@ uint8_t getFingerprintEnroll()
 }
 
 void writeToMem(uint8_t data) {
-  EEPROM.write(eeprom_address, data);
-  ++eeprom_address;
-  Serial.println(eeprom_address);
-  if (eeprom_address >= EEPROM.length()) {
+  EEPROM.write(data, data);
+  if (data >= EEPROM.length()) {
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Mem full!");
     delay(2000);
-    eeprom_address = 0;
   }
-
   delay(100);
 }
 
