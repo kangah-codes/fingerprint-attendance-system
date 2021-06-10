@@ -10,7 +10,7 @@ LiquidCrystal lcd(2, 3, 4, 5, 6, 7);
 uint8_t id;
 
 #if (defined(__AVR__) || defined(ESP8266)) && !defined(__AVR_ATmega2560__)
-SoftwareSerial mySerial(19, 18);
+SoftwareSerial mySerial(19, 18); // setup pins for RX, TX comm with fingerprint sensor
 #else
 #define mySerial Serial1
 #endif
@@ -24,8 +24,8 @@ char hexaKeys[4][4] = {
 
 // set pins for keypad
 
-byte rowPins[4] = {29, 27, 25, 23};
-byte colPins[4] = {28, 26, 24, 22};
+byte row_pins[4] = {29, 27, 25, 23};
+byte col_pins[4] = {28, 26, 24, 22};
 
 const int buzzer = 8;
 int eeprom_address = 0;
@@ -33,7 +33,7 @@ int eeprom_address = 0;
 // setup fingerprint object
 Adafruit_Fingerprint finger = Adafruit_Fingerprint(&mySerial);
 // setup keypad object
-Keypad customKeypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, 4, 4);
+Keypad custom_keypad = Keypad(makeKeymap(hexaKeys), row_pins, col_pins, 4, 4);
 
 void beep()
 {
@@ -46,12 +46,12 @@ void beep()
   noTone(buzzer);
 }
 
-uint8_t get_student_id()
+uint8_t getStudentID()
 {
   // creating a buffer to store keypad input
   char buffer[123] = {};
-  int currentBuffer = 0; // variable to store current buffer index
-  uint8_t student_id = 0;
+  int current_buffer = 0;  // variable to store current buffer index
+  uint16_t student_id = 0; // using a 16-bit integer
 
   // print welcome message on lcd
   lcd.clear();
@@ -60,33 +60,34 @@ uint8_t get_student_id()
 
   while (student_id < 127) // using 8 bit signed integer addresses
   {
-    Serial.println(student_id);
     while (!Serial.available())
     {
       // get input from keypad
-      char customKey = customKeypad.getKey();
-      if (customKey)
+      char custom_key = custom_keypad.getKey();
+      if (custom_key)
       {
         tone(buzzer, 750, 100);
         // delete key
-        if (customKey == '#')
+        if (custom_key == '#')
         {
-          if (currentBuffer != 0)
+          if (current_buffer != 0)
           {
-            --currentBuffer;
-            lcd.setCursor(currentBuffer, 1);
+            --current_buffer;
+            lcd.setCursor(current_buffer, 1);
             lcd.print(" ");
             byte lastChar = strlen(buffer) - 1;
             buffer[lastChar] = '\0';
           }
         }
-        else if (customKey == 'A' || customKey == 'B' || customKey == 'C' || customKey == 'D')
+        else if (custom_key == 'A' || custom_key == 'B' || custom_key == 'C' || custom_key == 'D')
         {
+          // do nothing if these keys are pressed
           continue;
         }
         // Enter key
-        else if (customKey == '*')
+        else if (custom_key == '*')
         {
+          Serial.println(student_id);
           if (student_id > 0 && student_id < 128)
           {
             if (EEPROM.read(atoi(String(buffer).c_str())) == atoi(String(buffer).c_str()))
@@ -108,6 +109,7 @@ uint8_t get_student_id()
             lcd.print("From 1-127");
             beep();
             delay(1000);
+            lcd.clear();
             return false;
           }
         }
@@ -115,11 +117,11 @@ uint8_t get_student_id()
         else
         {
           // add 8bit conversion of char to buffer
-          buffer[currentBuffer] = uint8_t(customKey);
-          lcd.setCursor(currentBuffer, 1);
-          lcd.print(customKey);
+          buffer[current_buffer] = uint8_t(custom_key);
+          lcd.setCursor(current_buffer, 1);
+          lcd.print(custom_key);
           // add to current buffer index
-          ++currentBuffer;
+          ++current_buffer;
           student_id = atoi(buffer); // convert char array to 8 bit int
           Serial.println(String(buffer));
         }
@@ -133,118 +135,120 @@ uint8_t getFingerprintID()
   uint8_t p = finger.getImage();
   while (p != FINGERPRINT_OK)
   {
-    char customKey = customKeypad.getKey();
+    char custom_key = custom_keypad.getKey();
 
-    if (!customKey) {
-      p = finger.getImage();
-    switch (p)
+    if (!custom_key)
     {
-    case FINGERPRINT_OK:
-      Serial.println("Image taken");
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Image taken");
-      delay(1000);
-      break;
-    case FINGERPRINT_NOFINGER:
-      Serial.println("No finger detected");
-      return p;
-    case FINGERPRINT_IMAGEFAIL:
-    case FINGERPRINT_PACKETRECIEVEERR:
-      Serial.println("Communication error");
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("System error:");
-      lcd.setCursor(0, 1);
-      lcd.print("0x1000"); // communication error
-      delay(1000);
-      return p;
-    default:
-      Serial.println("Unknown error");
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("rror code 0x1");
-      delay(1000);
-      return p;
+      p = finger.getImage();
+      switch (p)
+      {
+      case FINGERPRINT_OK:
+        Serial.println("Image taken");
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Image taken");
+        delay(1000);
+        break;
+      case FINGERPRINT_NOFINGER:
+        Serial.println("No finger detected");
+        return p;
+      case FINGERPRINT_IMAGEFAIL:
+      case FINGERPRINT_PACKETRECIEVEERR:
+        Serial.println("Communication error");
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("System error:");
+        lcd.setCursor(0, 1);
+        lcd.print("0x1000"); // communication error
+        delay(1000);
+        return p;
+      default:
+        Serial.println("Unknown error");
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("rror code 0x1");
+        delay(1000);
+        return p;
+      }
     }
-    } else {
-      if (customKey == 'A') {
-      mainMenu();
+    else
+    {
+      if (custom_key == 'A')
+      {
+        mainMenu();
+      }
     }
-    }
-    
-    
   }
-// OK success!
+  // OK success!
 
-p = finger.image2Tz();
-switch (p)
-{
-case FINGERPRINT_OK:
-  Serial.println("Image converted");
-  break;
-case FINGERPRINT_IMAGEMESS:
-  Serial.println("Image too messy");
-  return p;
-case FINGERPRINT_PACKETRECIEVEERR:
-  Serial.println("Communication error");
-  return p;
-case FINGERPRINT_FEATUREFAIL:
-  Serial.println("Could not find fingerprint features");
-  return p;
-case FINGERPRINT_INVALIDIMAGE:
-  Serial.println("Could not find fingerprint features");
-  return p;
-default:
-  Serial.println("Unknown error");
-  return p;
-}
+  p = finger.image2Tz();
+  switch (p)
+  {
+  case FINGERPRINT_OK:
+    Serial.println("Image converted");
+    break;
+  case FINGERPRINT_IMAGEMESS:
+    Serial.println("Image too messy");
+    return p;
+  case FINGERPRINT_PACKETRECIEVEERR:
+    Serial.println("Communication error");
+    return p;
+  case FINGERPRINT_FEATUREFAIL:
+    Serial.println("Could not find fingerprint features");
+    return p;
+  case FINGERPRINT_INVALIDIMAGE:
+    Serial.println("Could not find fingerprint features");
+    return p;
+  default:
+    Serial.println("Unknown error");
+    return p;
+  }
 
-// OK converted!
-p = finger.fingerSearch();
-if (p == FINGERPRINT_OK)
-{
-  Serial.println("Found a print match!");
-}
-else if (p == FINGERPRINT_PACKETRECIEVEERR)
-{
-  Serial.println("Communication error");
-  return p;
-}
-else if (p == FINGERPRINT_NOTFOUND)
-{
-  Serial.println("Did not find a match");
+  // OK converted!
+  p = finger.fingerSearch();
+  if (p == FINGERPRINT_OK)
+  {
+    Serial.println("Found a print match!");
+  }
+  else if (p == FINGERPRINT_PACKETRECIEVEERR)
+  {
+    Serial.println("Communication error");
+    return p;
+  }
+  else if (p == FINGERPRINT_NOTFOUND)
+  {
+    Serial.println("Did not find a match");
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("No match");
+    beep();
+    delay(1000);
+    return p;
+  }
+  else
+  {
+    Serial.println("Unknown error");
+    return p;
+  }
+
+  // found a match!
+  Serial.print("Found ID #");
+  Serial.print(finger.fingerID);
+  Serial.print(" with confidence of ");
+  Serial.println(finger.confidence);
+
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("No match");
+  lcd.print("Attendance mark");
+  lcd.setCursor(0, 1);
+  lcd.print("ID No: ");
+  lcd.setCursor(7, 1);
+  lcd.print(finger.fingerID);
   beep();
   delay(1000);
-  return p;
-}
-else
-{
-  Serial.println("Unknown error");
-  return p;
-}
+  lcd.clear();
 
-// found a match!
-Serial.print("Found ID #");
-Serial.print(finger.fingerID);
-Serial.print(" with confidence of ");
-Serial.println(finger.confidence);
-
-lcd.clear();
-lcd.setCursor(0, 0);
-lcd.print("Attendance mark");
-lcd.setCursor(0, 1);
-lcd.print("ID No: ");
-lcd.setCursor(7, 1);
-lcd.print(finger.fingerID);
-beep();
-delay(1000);
-lcd.clear();
-
-return finger.fingerID;
+  return finger.fingerID;
 }
 
 uint8_t getFingerprintEnroll()
@@ -494,8 +498,9 @@ uint8_t getFingerprintEnroll()
 
 void writeToMem(uint8_t data)
 {
-  EEPROM.write(data, data);
-  if (data >= EEPROM.length())
+  // function to write an 8 bit integer to EEPROM memory
+  EEPROM.write(data, data);    // write set data and data address the same
+  if (data >= EEPROM.length()) // if data address is greater than EEPROM capacity
   {
     lcd.clear();
     lcd.setCursor(0, 0);
@@ -538,7 +543,8 @@ void setup()
   }
 }
 
-void mainMenu() {
+void mainMenu()
+{
   int choice = 0;
   lcd.clear();
   while (choice == 0)
@@ -549,11 +555,11 @@ void mainMenu() {
     lcd.setCursor(0, 1);
     lcd.print("1 2 3");
 
-    char customKey = customKeypad.getKey();
+    char custom_key = custom_keypad.getKey();
 
-    if (customKey)
+    if (custom_key)
     {
-      if (customKey == '1')
+      if (custom_key == '1')
       {
         int p = -1;
         while (p != FINGERPRINT_OK)
@@ -566,28 +572,24 @@ void mainMenu() {
           getFingerprintID();
         }
       }
+      else if (custom_key == '2')
+      {
+        id = getStudentID();
+        if (id == 0 || id == false)
+        { // ID #0 not allowed, try again!
+          continue;
+        }
+        Serial.print("Enrolling ID #");
+        Serial.println(id);
+
+        while (!getFingerprintEnroll()) // keep loop running
+          ;
+      }
     }
   }
 }
 
 void loop()
 {
-  //  tone(buzzer, 2000);
-  //  delay(500);
-  //  noTone(buzzer);
-  //  delay(1000);
   mainMenu();
-
-  Serial.println("Ready to enroll a fingerprint!");
-  Serial.println("Please type in the ID # (from 1 to 127) you want to save this finger as...");
-  id = get_student_id();
-  if (id == 0 || id == false)
-  { // ID #0 not allowed, try again!
-    return;
-  }
-  Serial.print("Enrolling ID #");
-  Serial.println(id);
-
-  while (!getFingerprintEnroll())
-    ;
 }
